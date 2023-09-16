@@ -1,5 +1,6 @@
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.subplots as sp
 import numpy as np
 from math import cos, sin
 
@@ -228,4 +229,399 @@ def part_c():
     fig2.show()
     return 0
 
-part_c()
+def part_d():
+    observed_traj_normal = np.zeros((300, 3))
+    actual_traj_normal = np.zeros((300, 3))
+    estimated_traj_normal = np.zeros((300, 3))
+
+    observed_traj_pos_noise_enhanced = np.zeros((300, 3))
+    actual_traj_pos_noise_enhanced = np.zeros((300, 3))
+    estimated_traj_pos_noise_enhanced = np.zeros((300, 3))
+    
+    observed_traj_vel_noise_enhanced = np.zeros((300, 3))
+    actual_traj_vel_noise_enhanced = np.zeros((300, 3))
+    estimated_traj_vel_noise_enhanced = np.zeros((300, 3))
+
+    observed_traj_sensor_noise_enhanced = np.zeros((300, 3))
+    actual_traj_sensor_noise_enhanced = np.zeros((300, 3))
+    estimated_traj_sensor_noise_enhanced = np.zeros((300, 3))
+    
+
+    ## Action Model Parameters
+    deltaT = 1.0
+    A_t = np.array([[1.0,0,0,deltaT,0,0],
+                    [0,1.0,0,0,deltaT,0],
+                    [0,0,1.0,0,0,deltaT],
+                    [0,0,0,1.0,0,0],
+                    [0,0,0,0,1.0,0],
+                    [0,0,0,0,0,1.0]])
+
+    B_t = np.array([[0,0,0],
+                    [0,0,0],
+                    [0,0,0],
+                    [1.0,0,0],
+                    [0,1.0,0],
+                    [0,0,1.0]])
+    
+
+    ## Observation Model Parameters
+    C_t = np.array([[1.0,0,0,0,0,0],
+                    [0,1.0,0,0,0,0],
+                    [0,0,1.0,0,0,0]])
+    
+    ##### Normal case 1/4
+    X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    sigma_init = (0.008)*(0.008)*np.identity(6)
+    sigma_ri = 1.0
+    sigma_ridot = 0.008
+    mean_epsilon = np.zeros(6)
+    R = np.diag(np.array([sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot]))
+    sigma_s = 8
+    Q = sigma_s*sigma_s*np.identity(3)
+    mean_delta = np.zeros(3)
+
+    for i in range(300):
+        tt_now = i * deltaT *0.1
+        u_t = np.array([[cos(tt_now)], [sin(tt_now)], [sin(tt_now)]]) ## Control Inputs are sinusoidal functions
+        X_init = action_upd(X_init, A_t, B_t, u_t, mean_epsilon, R)
+        # print("Upd shape =", X_init.shape)
+        z_t = obsv_upd(X_init, C_t, mean_delta, Q)
+
+        mu_init, sigma_init = kalman_update(mu_init, sigma_init, u_t, z_t, A_t, B_t, C_t, Q, R)
+
+        observed_traj_normal[i] = z_t.squeeze()
+        actual_traj_normal[i] = X_init[0:3].squeeze()
+        estimated_traj_normal[i] = mu_init[0:3].squeeze()
+
+    ##### Position Noise Enhanced 2/4
+    X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    sigma_init = (0.008)*(0.008)*np.identity(6)
+    sigma_ri = 3.0
+    sigma_ridot = 0.008
+    mean_epsilon = np.zeros(6)
+    R = np.diag(np.array([sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot]))
+    sigma_s = 8
+    Q = sigma_s*sigma_s*np.identity(3)
+    mean_delta = np.zeros(3)
+
+    for i in range(300):
+        tt_now = i * deltaT *0.1
+        u_t = np.array([[cos(tt_now)], [sin(tt_now)], [sin(tt_now)]]) ## Control Inputs are sinusoidal functions
+        X_init = action_upd(X_init, A_t, B_t, u_t, mean_epsilon, R)
+        # print("Upd shape =", X_init.shape)
+        z_t = obsv_upd(X_init, C_t, mean_delta, Q)
+
+        mu_init, sigma_init = kalman_update(mu_init, sigma_init, u_t, z_t, A_t, B_t, C_t, Q, R)
+
+        observed_traj_pos_noise_enhanced[i] = z_t.squeeze()
+        actual_traj_pos_noise_enhanced[i] = X_init[0:3].squeeze()
+        estimated_traj_pos_noise_enhanced[i] = mu_init[0:3].squeeze()
+
+    ##### Velocity Noise Enhanced 3/4
+    sigma_ri = 1.0
+    sigma_ridot = 0.08
+    mean_epsilon = np.zeros(6)
+    R = np.diag(np.array([sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot]))
+    sigma_s = 8
+    Q = sigma_s*sigma_s*np.identity(3)
+    mean_delta = np.zeros(3)
+    X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    sigma_init = (0.008)*(0.008)*np.identity(6)
+
+    for i in range(300):
+        tt_now = i * deltaT *0.1
+        u_t = np.array([[cos(tt_now)], [sin(tt_now)], [sin(tt_now)]]) ## Control Inputs are sinusoidal functions
+        X_init = action_upd(X_init, A_t, B_t, u_t, mean_epsilon, R)
+        # print("Upd shape =", X_init.shape)
+        z_t = obsv_upd(X_init, C_t, mean_delta, Q)
+
+        mu_init, sigma_init = kalman_update(mu_init, sigma_init, u_t, z_t, A_t, B_t, C_t, Q, R)
+
+        observed_traj_vel_noise_enhanced[i] = z_t.squeeze()
+        actual_traj_vel_noise_enhanced[i] = X_init[0:3].squeeze()
+        estimated_traj_vel_noise_enhanced[i] = mu_init[0:3].squeeze()
+
+    ##### Sensor Noise enhanced 4/4
+    sigma_ri = 1.0
+    sigma_ridot = 0.008
+    mean_epsilon = np.zeros(6)
+    R = np.diag(np.array([sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot]))
+    sigma_s = 16
+    Q = sigma_s*sigma_s*np.identity(3)
+    mean_delta = np.zeros(3)
+    X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    sigma_init = (0.008)*(0.008)*np.identity(6)
+
+    for i in range(300):
+        tt_now = i * deltaT *0.1
+        u_t = np.array([[cos(tt_now)], [sin(tt_now)], [sin(tt_now)]]) ## Control Inputs are sinusoidal functions
+        X_init = action_upd(X_init, A_t, B_t, u_t, mean_epsilon, R)
+        # print("Upd shape =", X_init.shape)
+        z_t = obsv_upd(X_init, C_t, mean_delta, Q)
+
+        mu_init, sigma_init = kalman_update(mu_init, sigma_init, u_t, z_t, A_t, B_t, C_t, Q, R)
+
+        observed_traj_sensor_noise_enhanced[i] = z_t.squeeze()
+        actual_traj_sensor_noise_enhanced[i] = X_init[0:3].squeeze()
+        estimated_traj_sensor_noise_enhanced[i] = mu_init[0:3].squeeze()
+
+
+
+    # Create a 3D scatter plot for the first dataset
+    fig1 = go.Figure(data = [go.Scatter3d(
+        x=observed_traj_normal[:, 0],
+        y=observed_traj_normal[:, 1],
+        z=observed_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations Normal'
+    )])
+
+    # Add points from the second dataset to the same plot
+    fig1.add_trace(go.Scatter3d(
+        x=actual_traj_normal[:, 0],
+        y=actual_traj_normal[:, 1],
+        z=actual_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory Normal'
+    ))
+
+    fig1.add_trace(go.Scatter3d(
+        x=estimated_traj_normal[:, 0],
+        y=estimated_traj_normal[:, 1],
+        z=estimated_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation Normal'
+    ))
+
+    fig1.add_trace(go.Scatter3d(
+        x=observed_traj_pos_noise_enhanced[:, 0],
+        y=observed_traj_pos_noise_enhanced[:, 1],
+        z=observed_traj_pos_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations Position Noise Enhanced'
+    ))
+
+    # Add points from the second dataset to the same plot
+    fig1.add_trace(go.Scatter3d(
+        x=actual_traj_pos_noise_enhanced[:, 0],
+        y=actual_traj_pos_noise_enhanced[:, 1],
+        z=actual_traj_pos_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory Position Noise Enhanced'
+    ))
+
+    fig1.add_trace(go.Scatter3d(
+        x=estimated_traj_pos_noise_enhanced[:, 0],
+        y=estimated_traj_pos_noise_enhanced[:, 1],
+        z=estimated_traj_pos_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation Position Noise Enhanced'
+    ))
+
+    fig2 = go.Figure(data=[go.Scatter3d(
+        x=observed_traj_normal[:, 0],
+        y=observed_traj_normal[:, 1],
+        z=observed_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations Normal'
+    )])
+
+    # Add points from the second dataset to the same plot
+    fig2.add_trace(go.Scatter3d(
+        x=actual_traj_normal[:, 0],
+        y=actual_traj_normal[:, 1],
+        z=actual_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory Normal'
+    ))
+
+    fig2.add_trace(go.Scatter3d(
+        x=estimated_traj_normal[:, 0],
+        y=estimated_traj_normal[:, 1],
+        z=estimated_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation Normal'
+    ))
+
+    fig2.add_trace(go.Scatter3d(
+        x=observed_traj_vel_noise_enhanced[:, 0],
+        y=observed_traj_vel_noise_enhanced[:, 1],
+        z=observed_traj_vel_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations Velocity Noise Enhanced'
+    ))
+
+    # Add points from the second dataset to the same plot
+    fig2.add_trace(go.Scatter3d(
+        x=actual_traj_vel_noise_enhanced[:, 0],
+        y=actual_traj_vel_noise_enhanced[:, 1],
+        z=actual_traj_vel_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory Velocity Noise Enhanced'
+    ))
+
+    fig2.add_trace(go.Scatter3d(
+        x=estimated_traj_vel_noise_enhanced[:, 0],
+        y=estimated_traj_vel_noise_enhanced[:, 1],
+        z=estimated_traj_vel_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation Velocity Noise Enhanced'
+    ))
+
+    fig3 = go.Figure(data=[go.Scatter3d(
+        x=observed_traj_normal[:, 0],
+        y=observed_traj_normal[:, 1],
+        z=observed_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations Normal'
+    )])
+
+    # Add points from the second dataset to the same plot
+    fig3.add_trace(go.Scatter3d(
+        x=actual_traj_normal[:, 0],
+        y=actual_traj_normal[:, 1],
+        z=actual_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory Normal'
+    ))
+
+    fig3.add_trace(go.Scatter3d(
+        x=estimated_traj_normal[:, 0],
+        y=estimated_traj_normal[:, 1],
+        z=estimated_traj_normal[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation Normal'
+    ))
+
+    fig3.add_trace(go.Scatter3d(
+        x=observed_traj_sensor_noise_enhanced[:, 0],
+        y=observed_traj_sensor_noise_enhanced[:, 1],
+        z=observed_traj_sensor_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations Sensor Noise Enhanced'
+    ))
+
+    # Add points from the second dataset to the same plot
+    fig3.add_trace(go.Scatter3d(
+        x=actual_traj_sensor_noise_enhanced[:, 0],
+        y=actual_traj_sensor_noise_enhanced[:, 1],
+        z=actual_traj_sensor_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory Sensor Noise Enhanced'
+    ))
+
+    fig3.add_trace(go.Scatter3d(
+        x=estimated_traj_sensor_noise_enhanced[:, 0],
+        y=estimated_traj_sensor_noise_enhanced[:, 1],
+        z=estimated_traj_sensor_noise_enhanced[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation Sensor Noise Enhanced'
+    ))
+
+    
+    # fig.add_trace(go.Scatter3d(
+    #     x=observed_traj_vel_noise_enhanced[:, 0],
+    #     y=observed_traj_vel_noise_enhanced[:, 1],
+    #     z=observed_traj_vel_noise_enhanced[:, 2],
+    #     mode='lines',
+    #     #marker=dict(size=3),
+    #     name='Noisy Observations Velocity Noise Enhanced'
+    # ))
+
+    # # Add points from the second dataset to the same plot
+    # fig.add_trace(go.Scatter3d(
+    #     x=actual_traj_vel_noise_enhanced[:, 0],
+    #     y=actual_traj_vel_noise_enhanced[:, 1],
+    #     z=actual_traj_vel_noise_enhanced[:, 2],
+    #     mode='lines',
+    #     #marker=dict(size=3),
+    #     name='Actual Trajectory Velocity Noise Enhanced'
+    # ))
+
+    # fig.add_trace(go.Scatter3d(
+    #     x=estimated_traj_vel_noise_enhanced[:, 0],
+    #     y=estimated_traj_vel_noise_enhanced[:, 1],
+    #     z=estimated_traj_vel_noise_enhanced[:, 2],
+    #     mode='lines',
+    #     #marker=dict(size=3),
+    #     name='Kalman Estimation Velocity Noise Enhanced'
+    # ))
+
+    # fig.add_trace(go.Scatter3d(
+    #     x=observed_traj_sensor_noise_enhanced[:, 0],
+    #     y=observed_traj_sensor_noise_enhanced[:, 1],
+    #     z=observed_traj_sensor_noise_enhanced[:, 2],
+    #     mode='lines',
+    #     #marker=dict(size=3),
+    #     name='Noisy Observations Sensor Noise Enhanced'
+    # ))
+
+    # # Add points from the second dataset to the same plot
+    # fig.add_trace(go.Scatter3d(
+    #     x=actual_traj_sensor_noise_enhanced[:, 0],
+    #     y=actual_traj_sensor_noise_enhanced[:, 1],
+    #     z=actual_traj_sensor_noise_enhanced[:, 2],
+    #     mode='lines',
+    #     #marker=dict(size=3),
+    #     name='Actual Trajectory Sensor Noise Enhanced'
+    # ))
+
+    # fig.add_trace(go.Scatter3d(
+    #     x=estimated_traj_sensor_noise_enhanced[:, 0],
+    #     y=estimated_traj_sensor_noise_enhanced[:, 1],
+    #     z=estimated_traj_sensor_noise_enhanced[:, 2],
+    #     mode='lines',
+    #     #marker=dict(size=3),
+    #     name='Kalman Estimation Sensor Noise Enhanced'
+    # ))
+
+    # Update the layout if needed
+    # fig.update_layout(
+    #     title='3D Line Plots of Trajectories and Observations for varying noises',
+    #     scene=dict(aspectmode='data')
+    # )
+
+    # fig2 = go.Figure(data=[go.Scatter(
+    #     x=estimated_traj[:, 0],
+    #     y=estimated_traj[:, 1],
+    #     mode='markers',
+    #     marker=dict(size=3),
+    #     name='Trajectory Points',
+    # )])
+
+    # fig2.update_layout(
+    #     title='Projection of Estimated Traj into X-Y plane',
+    #     scene=dict(aspectmode='data')
+    # )
+    
+    # Show the plot
+    #fig1.show()
+    fig1.show()
+    fig3.show()
+    fig2.show()
+    return 0
+
+
+part_d()
