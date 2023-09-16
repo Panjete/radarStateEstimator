@@ -623,5 +623,117 @@ def part_d():
     fig2.show()
     return 0
 
+def kalman_update_pure_evolution(mu_tm1, sigma_tm1, u_t, A_t, B_t, R_t):
+    A_t_transpose = np.transpose(A_t)
+    mu_t_bar = np.dot(A_t, mu_tm1) + np.dot(B_t, u_t)
+    sigma_t_bar = np.dot(np.dot(A_t, sigma_tm1), A_t_transpose) + R_t
+    #return mu_t_bar, sigma_t_bar
+    return mu_tm1, sigma_tm1
 
-part_d()
+def part_e():
+    X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    sigma_init = (0.008)*(0.008)*np.identity(6)
+    observed_traj = np.zeros((300, 3))
+    actual_traj = np.zeros((300, 3))
+    estimated_traj = np.zeros((300, 3))
+
+    ## Action Model Parameters
+    deltaT = 1.0
+    A_t = np.array([[1.0,0,0,deltaT,0,0],
+                    [0,1.0,0,0,deltaT,0],
+                    [0,0,1.0,0,0,deltaT],
+                    [0,0,0,1.0,0,0],
+                    [0,0,0,0,1.0,0],
+                    [0,0,0,0,0,1.0]])
+
+    B_t = np.array([[0,0,0],
+                    [0,0,0],
+                    [0,0,0],
+                    [1.0,0,0],
+                    [0,1.0,0],
+                    [0,0,1.0]])
+    sigma_ri = 1.0
+    sigma_ridot = 0.008
+    mean_epsilon = np.zeros(6)
+    R = np.diag(np.array([sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot]))
+
+    ## Observation Model Parameters
+    C_t = np.array([[1.0,0,0,0,0,0],
+                    [0,1.0,0,0,0,0],
+                    [0,0,1.0,0,0,0]])
+    sigma_s = 8
+    Q = sigma_s*sigma_s*np.identity(3)
+    mean_delta = np.zeros(3)
+
+    for i in range(300):
+        tt_now = i * deltaT *0.1
+        u_t = np.array([[cos(tt_now)], [sin(tt_now)], [sin(tt_now)]]) ## Control Inputs are sinusoidal functions
+        X_init = action_upd(X_init, A_t, B_t, u_t, mean_epsilon, R)
+        # print("Upd shape =", X_init.shape)
+        z_t = obsv_upd(X_init, C_t, mean_delta, Q)
+
+        if ((i < 50) or (i > 80 and i < 200) or (i >230)):
+            mu_init, sigma_init = kalman_update(mu_init, sigma_init, u_t, z_t, A_t, B_t, C_t, Q, R)
+        else:
+            mu_init, sigma_init = kalman_update_pure_evolution(mu_init, sigma_init, u_t, A_t, B_t, R)
+
+        observed_traj[i] = z_t.squeeze()
+        actual_traj[i] = X_init[0:3].squeeze()
+        estimated_traj[i] = mu_init[0:3].squeeze()
+        #print(mu_init)
+
+    # Create a 3D scatter plot for the first dataset
+    fig = go.Figure(data=[go.Scatter3d(
+        x=observed_traj[:, 0],
+        y=observed_traj[:, 1],
+        z=observed_traj[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Noisy Observations'
+    )])
+
+    # Add points from the second dataset to the same plot
+    fig.add_trace(go.Scatter3d(
+        x=actual_traj[:, 0],
+        y=actual_traj[:, 1],
+        z=actual_traj[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Trajectory'
+    ))
+
+    fig.add_trace(go.Scatter3d(
+        x=estimated_traj[:, 0],
+        y=estimated_traj[:, 1],
+        z=estimated_traj[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Kalman Estimation'
+    ))
+
+    # Update the layout if needed
+    fig.update_layout(
+        title='3D Line Plots of Actual vs Estimated Trajectory, and Noisy Observations and Sensor Off Periods',
+        scene=dict(aspectmode='data')
+    )
+
+    fig2 = go.Figure(data=[go.Scatter(
+        x=estimated_traj[:, 0],
+        y=estimated_traj[:, 1],
+        mode='markers',
+        marker=dict(size=3),
+        name='Trajectory Points',
+    )])
+
+    fig2.update_layout(
+        title='Projection of Estimated Traj into X-Y plane',
+        scene=dict(aspectmode='data')
+    )
+    
+    # Show the plot
+    #fig.show()
+    fig.show()
+    return 0
+
+part_e()
