@@ -858,4 +858,95 @@ def part_f():
     #fig.show()
     fig.show()
     return 0
-part_f()
+
+def part_g():
+    X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
+    sigma_init = (0.008)*(0.008)*np.identity(6)
+
+    actual_vel = np.zeros((300, 3))
+    estimated_vel = np.zeros((300, 3))
+
+    ## Action Model Parameters
+    deltaT = 1.0
+    A_t = np.array([[1.0,0,0,deltaT,0,0],
+                    [0,1.0,0,0,deltaT,0],
+                    [0,0,1.0,0,0,deltaT],
+                    [0,0,0,1.0,0,0],
+                    [0,0,0,0,1.0,0],
+                    [0,0,0,0,0,1.0]])
+
+    B_t = np.array([[0,0,0],
+                    [0,0,0],
+                    [0,0,0],
+                    [1.0,0,0],
+                    [0,1.0,0],
+                    [0,0,1.0]])
+    sigma_ri = 1.0
+    sigma_ridot = 0.008
+    mean_epsilon = np.zeros(6)
+    R = np.diag(np.array([sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ri*sigma_ri, sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot,sigma_ridot*sigma_ridot]))
+
+    ## Observation Model Parameters
+    C_t = np.array([[1.0,0,0,0,0,0],
+                    [0,1.0,0,0,0,0],
+                    [0,0,1.0,0,0,0]])
+    sigma_s = 8
+    Q = sigma_s*sigma_s*np.identity(3)
+    mean_delta = np.zeros(3)
+
+    for i in range(300):
+        tt_now = i * deltaT *0.1
+        u_t = np.array([[cos(tt_now)], [sin(tt_now)], [sin(tt_now)]]) ## Control Inputs are sinusoidal functions
+        X_init = action_upd(X_init, A_t, B_t, u_t, mean_epsilon, R)
+        z_t = obsv_upd(X_init, C_t, mean_delta, Q)
+
+        mu_init, sigma_init = kalman_update(mu_init, sigma_init, u_t, z_t, A_t, B_t, C_t, Q, R)
+
+        actual_vel[i] = X_init[3:6].squeeze()
+        estimated_vel[i] = mu_init[3:6].squeeze()
+
+    # Create a 3D scatter plot for the first dataset
+    fig = go.Figure(data=[go.Scatter3d(
+        x=actual_vel[:, 0],
+        y=actual_vel[:, 1],
+        z=actual_vel[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Actual Velocity Values'
+    )])
+
+    # Add points from the second dataset to the same plot
+    fig.add_trace(go.Scatter3d(
+        x=estimated_vel[:, 0],
+        y=estimated_vel[:, 1],
+        z=estimated_vel[:, 2],
+        mode='lines',
+        #marker=dict(size=3),
+        name='Estimated Velocity Velocity'
+    ))
+
+    # Update the layout if needed
+    fig.update_layout(
+        title='3D Line Plots of Actual vs Estimated Velocity Points',
+        scene=dict(aspectmode='data')
+    )
+
+    # fig2 = go.Figure(data=[go.Scatter(
+    #     x=estimated_traj[:, 0],
+    #     y=estimated_traj[:, 1],
+    #     mode='markers',
+    #     marker=dict(size=3),
+    #     name='Trajectory Points',
+    # )])
+
+    # fig2.update_layout(
+    #     title='Projection of Estimated Traj into X-Y plane',
+    #     scene=dict(aspectmode='data')
+    # )
+    
+    fig.show()
+    return 0
+
+
+part_g()
