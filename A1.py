@@ -117,6 +117,25 @@ def kalman_update(mu_tm1, sigma_tm1, u_t, z_t, A_t, B_t, C_t, Q_t, R_t):
     sigma_t = np.dot((np.identity(n_shape)-np.dot(K_t, C_t)), sigma_t_bar)
     return mu_t, sigma_t
 
+
+def uncer_ellipse_params(mu_t, sigma_t):
+    xy = mu_t[0:2].reshape(-1, 1)
+    xy_cov = sigma_t[:2, :2]
+    eigen_values, eigen_vectors = np.linalg.eig(xy_cov)
+
+    # Determine the major and minor axes lengths (standard deviations)
+    std_dev_major = np.sqrt(eigen_values[0])
+    std_dev_minor = np.sqrt(eigen_values[1])
+
+    rotation_angle = np.arctan2(eigen_vectors[1, 0], eigen_vectors[0, 0])
+
+    theta = np.linspace(0, 2 * np.pi, 100)
+
+    x_rotated = mu_t[0] + (std_dev_major * np.cos(theta)) * np.cos(rotation_angle) - (std_dev_minor * np.sin(theta)) * np.sin(rotation_angle)
+    y_rotated = mu_t[1] + (std_dev_major * np.cos(theta)) * np.sin(rotation_angle) + (std_dev_minor * np.sin(theta)) * np.cos(rotation_angle)
+
+    return x_rotated, y_rotated
+
 def part_c():
     X_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
     mu_init = np.array([[0.0], [0.0], [0.0], [0.0], [0.0], [0.0]]) ## start from (0,0,0) with vel (0,0,0)
@@ -124,6 +143,8 @@ def part_c():
     observed_traj = np.zeros((300, 3))
     actual_traj = np.zeros((300, 3))
     estimated_traj = np.zeros((300, 3))
+
+    uncertainity_ellipse_values = np.zeros((300, 100, 2))
     print("xt shape = ", X_init.shape)
 
     ## Action Model Parameters
@@ -176,6 +197,9 @@ def part_c():
         actual_traj[i] = X_init[0:3].squeeze()
         estimated_traj[i] = mu_init[0:3].squeeze()
 
+        x_uncert_points, y_uncert_points = uncer_ellipse_params(mu_init, sigma_init)
+        uncertainity_ellipse_values[i] = np.column_stack((x_uncert_points, y_uncert_points))
+
     # Create a 3D scatter plot for the first dataset
     fig = go.Figure(data=[go.Scatter3d(
         x=observed_traj[:, 0],
@@ -214,15 +238,26 @@ def part_c():
     fig2 = go.Figure(data=[go.Scatter(
         x=estimated_traj[:, 0],
         y=estimated_traj[:, 1],
-        mode='markers',
-        marker=dict(size=3),
+        mode='lines',
+        #marker=dict(size=3),
         name='Trajectory Points',
     )])
+
+    for i in range(300):
+        fig2.add_trace(go.Scatter(
+            x=uncertainity_ellipse_values[i][:,0],
+            y=uncertainity_ellipse_values[i][:,1],
+            mode='lines',
+            line=dict(color='red', width=1),
+            showlegend=False
+        ))
 
     fig2.update_layout(
         title='Projection of Estimated Traj into X-Y plane',
         scene=dict(aspectmode='data')
     )
+
+
     
     # Show the plot
     #fig.show()
@@ -623,6 +658,7 @@ def part_d():
     fig2.show()
     return 0
 
+
 def kalman_update_pure_evolution(mu_tm1, sigma_tm1, u_t, A_t, B_t, R_t):
     A_t_transpose = np.transpose(A_t)
     mu_t_bar = np.dot(A_t, mu_tm1) + np.dot(B_t, u_t)
@@ -949,4 +985,6 @@ def part_g():
     return 0
 
 
-part_g()
+
+
+part_c()
