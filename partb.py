@@ -8,16 +8,9 @@ def noise(mean_matrix, covariance_matrix):
     return np.random.multivariate_normal(mean_matrix, covariance_matrix).reshape(-1, 1)
 
 def action_upd(X_t, A_t, B_t, u_t, mean_epsilon, R):
-    # print("S1 = ", np.dot(A_t, X_t).shape)
-    # print("S2 = ", np.dot(B_t, u_t).shape)
-    # print("S3 = ", noise(mean_epsilon, R).shape)
-    # print("S Sum = ", (np.dot(A_t, X_t) + np.dot(B_t, u_t) + noise(mean_epsilon, R)).shape)
     return np.dot(A_t, X_t) + np.dot(B_t, u_t) + noise(mean_epsilon, R)
 
 def obsv_upd(X_t, C_t, mean_delta, Q):
-    # print(X_t.shape)
-    # print(C_t.shape)
-    # print(np.dot(C_t, X_t).shape)
     return np.dot(C_t, X_t) + noise(mean_delta, Q)
 
 def kalman_update_evolve(mu_tm1, sigma_tm1, u_t, A_t, B_t, R_t):

@@ -261,7 +261,7 @@ def part_c():
     
     # Show the plot
     #fig.show()
-    fig2.show()
+    fig.show()
     return 0
 
 def part_d():
