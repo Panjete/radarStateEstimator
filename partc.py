@@ -18,6 +18,18 @@ def action_upd(X_t, A_t, B_t, u_t, mean_epsilon, R):
 def obsv_upd(X_t, C_t, mean_delta, Q):
     return np.dot(C_t, X_t) + noise(mean_delta, Q)
 
+
+def kalman_update(mu_tm1, sigma_tm1, u_t, z_t, A_t, B_t, C_t, Q_t, R_t):
+    n_shape = mu_tm1.shape[0]
+    C_t_transpose = np.transpose(C_t)
+    A_t_transpose = np.transpose(A_t)
+    mu_t_bar = np.dot(A_t, mu_tm1) + np.dot(B_t, u_t)
+    sigma_t_bar = np.dot(np.dot(A_t, sigma_tm1), A_t_transpose) + R_t
+    K_t = np.dot(np.dot(sigma_t_bar, C_t_transpose),np.linalg.inv(np.dot(np.dot(C_t, sigma_t_bar),C_t_transpose)+Q_t))
+    mu_t = mu_t_bar + np.dot(K_t, (z_t-np.dot(C_t, mu_t_bar)))
+    sigma_t = np.dot((np.identity(n_shape)-np.dot(K_t, C_t)), sigma_t_bar)
+    return mu_t, sigma_t
+
 def obsv_upd_land(X_t, mean_delta, Q, landmark_num):
     x = X_t[0][0]
     y = X_t[1][0]
@@ -36,16 +48,6 @@ def obsv_upd_land(X_t, mean_delta, Q, landmark_num):
 
     return h_mu_t + noise(mean_delta, Q)
 
-def kalman_update(mu_tm1, sigma_tm1, u_t, z_t, A_t, B_t, C_t, Q_t, R_t):
-    n_shape = mu_tm1.shape[0]
-    C_t_transpose = np.transpose(C_t)
-    A_t_transpose = np.transpose(A_t)
-    mu_t_bar = np.dot(A_t, mu_tm1) + np.dot(B_t, u_t)
-    sigma_t_bar = np.dot(np.dot(A_t, sigma_tm1), A_t_transpose) + R_t
-    K_t = np.dot(np.dot(sigma_t_bar, C_t_transpose),np.linalg.inv(np.dot(np.dot(C_t, sigma_t_bar),C_t_transpose)+Q_t))
-    mu_t = mu_t_bar + np.dot(K_t, (z_t-np.dot(C_t, mu_t_bar)))
-    sigma_t = np.dot((np.identity(n_shape)-np.dot(K_t, C_t)), sigma_t_bar)
-    return mu_t, sigma_t
 
 def jacobian_h_l1(mu):
     x = mu[0][0]
