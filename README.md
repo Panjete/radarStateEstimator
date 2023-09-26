@@ -22,4 +22,6 @@ I implement the Mahalanobis distance, for measuring how associated an observatio
 
 My algorithm for association is based on a greedy-permutation approach, and as observed in the plot of estimated and actual trajectories of 4 airplanes below, is able to map them correctly.
 
+<p align="center">
 <img width="565" alt="Screenshot 2023-09-26 at 4 06 34 PM" src="https://github.com/Panjete/radarStateEstimator/assets/103451209/9eb0b6e2-9132-46ba-a6b6-b66cc3a9f0e6">
+</p>
