@@ -1,4 +1,12 @@
-## radarStateEstimator
+## State Estimator
+
+### How to run the Simulations
+
+"top.py" enlists the variety of simulations possible.
+
+In the project directory, simply call top.py with the relevant keyword of that simulation, enlisted in the file itself.
+
+Ex. python top.py simulate_kf
 
 ### State Estimation using Kalman Filters
 
@@ -28,6 +36,7 @@ The image below demostrates periods of sensor faults, where linear-sh stretches 
   
 Further, if the sensor of any 1 direction drops of, we become uncertain in that direction, but the other two are still updated accurately. This is evident from the trajectory plots (left) and the uncertainity ellipses (right, projected into XY plane) where the X-sensor develops a fault at around the 1/3rd timestamp of the simulation. The left image shows how the the estimated trajectory is fairly accurate in it’s y and z coordinates. However, it evolves the last measured update in X, which diverges with time since these is a velocity update happening in X as well.
 
+
 <p align="center">
 <img width="210" alt="Screenshot 2023-09-26 at 4 23 28 PM" src="https://github.com/Panjete/radarStateEstimator/assets/103451209/1f9efb97-b9ca-4129-8d04-7241600fbdde">
 <img width="400" alt="Screenshot 2023-09-26 at 4 21 37 PM" src="https://github.com/Panjete/radarStateEstimator/assets/103451209/f3f80c5f-bae9-4ec0-984e-80086207db06">
@@ -47,3 +56,21 @@ My algorithm for association is based on a greedy-permutation approach, and as o
 <p align="center">
 <img width="565" alt="Screenshot 2023-09-26 at 4 06 34 PM" src="https://github.com/Panjete/radarStateEstimator/assets/103451209/9eb0b6e2-9132-46ba-a6b6-b66cc3a9f0e6">
 </p>
+
+### Incorporating Landmarks
+
+Non-Linear Distance Measurement was obtained via 5 landmarks, and I incorporated these to make a better estimate of the state. This was done using Extended Kalman Filters, where a linearisation at the mean yields an approximate gaussian that is propagated.
+
+Simulation shows how the extra information provided by the landmark makes the estimate accurate, and how quickly the estimated diverge when the airplane leaves the landmark range
+
+<p align="center">
+<img width="425" alt="Screenshot 2023-09-28 at 7 09 14 PM" src="https://github.com/Panjete/radarStateEstimator/assets/103451209/48089cf6-f998-4924-8fa2-2b6bada22815">
+</p>
+
+Experimenting with noise shows it's effect on estimation accuracy in the range of a Landmark
+
+<p align="center">
+<img width="541" alt="Screenshot 2023-09-28 at 7 09 30 PM" src="https://github.com/Panjete/radarStateEstimator/assets/103451209/332e43b3-64d9-4064-b67d-5c3c7c23190f">
+</p>
+
+
