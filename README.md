@@ -4,9 +4,9 @@
 
 "top.py" enlists the variety of simulations possible.
 
-In the project directory, simply call top.py with the relevant keyword of that simulation, enlisted in the file itself.
+In the project directory, simply call `top.py` with the relevant keyword of that simulation, enlisted in the file itself.
 
-Ex. python top.py simulate_kf
+For example, to simulate, estimate and plot a 3D trajectory, call `python top.py simulate_kf`.
 
 ### State Estimation using Kalman Filters
 
